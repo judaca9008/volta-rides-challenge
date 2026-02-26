@@ -6,10 +6,17 @@ import (
 	"voltarides/smart-router/models"
 )
 
+// CircuitBreakerInfo holds circuit breaker state for a processor
+type CircuitBreakerInfo struct {
+	State     models.CircuitState
+	OpenedAt  time.Time
+}
+
 // InMemoryStore provides thread-safe in-memory storage for transactions and routing decisions
 type InMemoryStore struct {
 	transactions     []models.Transaction
 	routingDecisions []models.RoutingDecision
+	circuitBreakers  map[string]*CircuitBreakerInfo // key: "processor:country"
 	mu               sync.RWMutex
 }
 
@@ -18,6 +25,7 @@ func NewInMemoryStore() *InMemoryStore {
 	return &InMemoryStore{
 		transactions:     make([]models.Transaction, 0),
 		routingDecisions: make([]models.RoutingDecision, 0),
+		circuitBreakers:  make(map[string]*CircuitBreakerInfo),
 	}
 }
 
@@ -109,4 +117,59 @@ func (s *InMemoryStore) Clear() {
 	defer s.mu.Unlock()
 	s.transactions = make([]models.Transaction, 0)
 	s.routingDecisions = make([]models.RoutingDecision, 0)
+	s.circuitBreakers = make(map[string]*CircuitBreakerInfo)
+}
+
+// OpenCircuit opens the circuit breaker for a processor
+func (s *InMemoryStore) OpenCircuit(processor, country string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	key := processor + ":" + country
+	s.circuitBreakers[key] = &CircuitBreakerInfo{
+		State:    models.CircuitOpen,
+		OpenedAt: time.Now(),
+	}
+}
+
+// CloseCircuit closes the circuit breaker for a processor
+func (s *InMemoryStore) CloseCircuit(processor, country string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	key := processor + ":" + country
+	delete(s.circuitBreakers, key)
+}
+
+// GetCircuitState returns the circuit breaker state for a processor
+func (s *InMemoryStore) GetCircuitState(processor, country string, timeout time.Duration) models.CircuitState {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	key := processor + ":" + country
+	info, exists := s.circuitBreakers[key]
+
+	if !exists {
+		return models.CircuitClosed
+	}
+
+	// Check if circuit should transition to half-open
+	if time.Since(info.OpenedAt) > timeout {
+		return models.CircuitHalfOpen
+	}
+
+	return info.State
+}
+
+// GetCircuitOpenedAt returns when the circuit was opened for a processor
+func (s *InMemoryStore) GetCircuitOpenedAt(processor, country string) *time.Time {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	key := processor + ":" + country
+	info, exists := s.circuitBreakers[key]
+
+	if !exists {
+		return nil
+	}
+
+	return &info.OpenedAt
 }

@@ -7,13 +7,21 @@ type RoutingRequest struct {
 	Country  string  `json:"country" validate:"required,len=2"`
 }
 
-// RoutingResponse represents the response with processor selection
-type RoutingResponse struct {
+// ProcessorOption represents a processor option with its approval rate
+type ProcessorOption struct {
 	Processor    string  `json:"processor"`
 	ApprovalRate float64 `json:"approval_rate"`
-	RiskLevel    string  `json:"risk_level"` // "low", "medium", "high"
-	Reason       string  `json:"reason"`
-	Timestamp    string  `json:"timestamp"`
+}
+
+// RoutingResponse represents the response with processor selection
+type RoutingResponse struct {
+	Processor    string             `json:"processor"`
+	ApprovalRate float64            `json:"approval_rate"`
+	RiskLevel    string             `json:"risk_level"` // "low", "medium", "high"
+	Reason       string             `json:"reason"`
+	Timestamp    string             `json:"timestamp"`
+	Fallback     *ProcessorOption   `json:"fallback,omitempty"`     // Optional: Second best processor
+	LastResort   *ProcessorOption   `json:"last_resort,omitempty"`  // Optional: Third best processor
 }
 
 // RoutingDecision represents a historical routing decision for tracking

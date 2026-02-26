@@ -42,8 +42,20 @@ func (rc *RoutingController) RouteTransaction(c echo.Context) error {
 		})
 	}
 
+	// Check if simulation mode is enabled
+	simulate := c.QueryParam("simulate") == "true"
+
+	// Check if failover ranking is requested
+	failover := c.QueryParam("failover") == "true"
+
 	// Get routing decision
-	response, err := rc.service.SelectBestProcessor(req)
+	var response *models.RoutingResponse
+	var err error
+	if failover {
+		response, err = rc.service.SelectBestProcessorWithFailover(req, simulate)
+	} else {
+		response, err = rc.service.SelectBestProcessor(req, simulate)
+	}
 	if err != nil {
 		// Check if it's an unsupported country error
 		if err.Error() == "country "+req.Country+" not supported" {
