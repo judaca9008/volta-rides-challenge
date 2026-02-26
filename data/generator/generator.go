@@ -40,10 +40,10 @@ func GenerateTestTransactions(count int) []models.Transaction {
 		{"PayFlow_CO", "CO", "COP", 0.57, "bad_period"},   // 57-89% approval - has bad period
 	}
 
-	// Generate transactions distributed across 2-3 hours
+	// Generate transactions distributed across last 10 minutes (to fit within 15-minute time window)
 	transactionsPerProcessor := count / len(processorConfigs)
-	durationHours := 2.5
-	intervalMinutes := (durationHours * 60) / float64(transactionsPerProcessor)
+	durationMinutes := 10.0 // Changed from 2.5 hours to 10 minutes to fit within 15-minute window
+	intervalMinutes := durationMinutes / float64(transactionsPerProcessor)
 
 	for _, cfg := range processorConfigs {
 		for i := 0; i < transactionsPerProcessor; i++ {
@@ -51,8 +51,8 @@ func GenerateTestTransactions(count int) []models.Transaction {
 			minutesAgo := int(float64(i) * intervalMinutes)
 			timestamp := now.Add(-time.Duration(minutesAgo) * time.Minute)
 
-			// Determine if this is during the "bad period" (middle 20 minutes)
-			isBadPeriod := cfg.pattern == "bad_period" && minutesAgo >= 60 && minutesAgo <= 80
+			// Determine if this is during the "bad period" (middle portion of the time window)
+			isBadPeriod := cfg.pattern == "bad_period" && minutesAgo >= 4 && minutesAgo <= 7
 
 			// Calculate approval probability
 			approvalProb := cfg.approvalRate
