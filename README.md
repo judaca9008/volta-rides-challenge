@@ -549,6 +549,48 @@ This project follows Yuno's Go microservice patterns:
 
 ---
 
+## 🌐 Public Deployment
+
+This project is ready for instant deployment to Fly.io with a public HTTPS URL.
+
+### Quick Deploy (3 commands)
+
+```bash
+# 1. Install Fly CLI
+brew install flyctl  # macOS
+# curl -L https://fly.io/install.sh | sh  # Linux
+
+# 2. Authenticate
+fly auth signup  # or fly auth login
+
+# 3. Deploy
+fly launch --now
+```
+
+Your API will be live at: `https://volta-router.fly.dev` 🚀
+
+**Features included:**
+- ✅ Free tier (256MB RAM, auto-sleep when idle)
+- ✅ HTTPS automatic
+- ✅ Auto-scaling
+- ✅ Health checks configured
+- ✅ Zero-downtime deploys
+
+**After deployment:**
+```bash
+# Load test data
+curl -X POST https://volta-router.fly.dev/volta-router/v1/transactions/load
+
+# Test routing
+curl -X POST https://volta-router.fly.dev/volta-router/v1/route \
+  -H "Content-Type: application/json" \
+  -d '{"amount": 100, "currency": "BRL", "country": "BR"}'
+```
+
+📖 **Full deployment guide:** See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed instructions, troubleshooting, and advanced configuration.
+
+---
+
 ## 🚀 Production Considerations
 
 This is a **proof-of-concept**. For production deployment, consider:

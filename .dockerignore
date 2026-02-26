@@ -1,0 +1,41 @@
+# Git
+.git
+.gitignore
+.github
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+
+# Documentation
+*.md
+!README.md
+ARCHITECTURE.md
+CLAUDE.md
+
+# Build artifacts
+volta-router
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test files
+*_test.go
+tests/
+
+# Scripts
+demo.sh
+*.sh
+
+# Fly.io
+.fly
+fly.toml
+
+# Other
+.env
+.env.local
+tmp/
