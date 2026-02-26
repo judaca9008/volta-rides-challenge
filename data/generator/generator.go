@@ -120,3 +120,33 @@ func LoadTransactionsFromFile(filepath string) ([]models.Transaction, error) {
 
 	return dataset.Transactions, nil
 }
+
+// AdjustTransactionTimestamps adjusts transaction timestamps to be relative to current server time
+// This ensures test data works regardless of when it was originally generated
+func AdjustTransactionTimestamps(transactions []models.Transaction) []models.Transaction {
+	if len(transactions) == 0 {
+		return transactions
+	}
+
+	now := time.Now()
+
+	// Find the most recent (latest) timestamp in the transactions
+	var latestTimestamp time.Time
+	for _, tx := range transactions {
+		if latestTimestamp.IsZero() || tx.Timestamp.After(latestTimestamp) {
+			latestTimestamp = tx.Timestamp
+		}
+	}
+
+	// Calculate the time difference between now and the latest transaction
+	timeDiff := now.Sub(latestTimestamp)
+
+	// Adjust all timestamps by adding the time difference
+	adjustedTransactions := make([]models.Transaction, len(transactions))
+	for i, tx := range transactions {
+		adjustedTransactions[i] = tx
+		adjustedTransactions[i].Timestamp = tx.Timestamp.Add(timeDiff)
+	}
+
+	return adjustedTransactions
+}

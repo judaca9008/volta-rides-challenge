@@ -19,7 +19,7 @@ func NewDataController(store *storage.InMemoryStore) *DataController {
 	return &DataController{store: store}
 }
 
-// LoadTestData loads test transactions from the JSON file
+// LoadTestData loads test transactions from the JSON file and adjusts timestamps
 func (dc *DataController) LoadTestData(c echo.Context) error {
 	filepath := "data/test_transactions.json"
 
@@ -31,6 +31,10 @@ func (dc *DataController) LoadTestData(c echo.Context) error {
 			Message: "Failed to load test data: " + err.Error(),
 		})
 	}
+
+	// Adjust timestamps to be relative to current server time
+	// This ensures test data works regardless of when it was generated
+	transactions = generator.AdjustTransactionTimestamps(transactions)
 
 	// Clear existing data
 	dc.store.Clear()
