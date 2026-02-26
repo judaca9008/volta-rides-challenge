@@ -305,6 +305,16 @@ go test ./tests -v
 
 ## 🏗️ Architecture
 
+### Architectural Summary
+
+This proof-of-concept implements a smart payment router using **Go with Echo framework**, following Yuno's standard microservice patterns. The approach prioritizes rapid delivery of a working prototype while maintaining production-grade architecture patterns. We chose a **3-layer architecture** (Controllers → Services → Storage) that separates HTTP handling, business logic, and data access, making the codebase easy to understand and extend. The core routing algorithm calculates real-time approval rates using a **15-minute sliding time window**, then selects the processor with the highest approval rate for each country. DataDog APM integration provides distributed tracing out of the box, and thread-safe operations via `sync.RWMutex` ensure concurrent requests don't corrupt shared data.
+
+For the **1-hour POC scope**, we made pragmatic trade-offs: **in-memory storage** instead of PostgreSQL eliminates database setup time and provides zero-latency queries, though data is lost on restart. We implemented **simplified middleware** (basic logging and trace ID generation) rather than integrating Yuno's full internal libraries, allowing the service to run standalone without authentication dependencies. The processor-to-country mapping is **hard-coded** in configuration rather than database-driven, which is acceptable for a demo with 3 countries but would need to change for production. These trade-offs enabled rapid development while keeping the code clean and following Yuno's architectural conventions exactly.
+
+**Next steps for production** would involve replacing in-memory storage with **PostgreSQL/TimescaleDB** for persistence and time-series optimization, adding **Redis caching** to reduce database load for frequent approval rate queries, and implementing **circuit breaker logic** to automatically disable consistently failing processors. The service would deploy to **Kubernetes via Yuno's Kingdom platform**, integrate with the full monitoring stack (Prometheus, Grafana, alerting), and add API authentication with rate limiting. The core routing logic and layered architecture require no changes—only the infrastructure dependencies would evolve. Estimated production migration: **2-3 weeks with 2 engineers** (1 backend, 1 DevOps).
+
+---
+
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed architecture documentation.
 
 **High-Level Overview:**
