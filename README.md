@@ -591,6 +591,228 @@ curl -X POST https://volta-router.fly.dev/volta-router/v1/route \
 
 ---
 
+## 🌍 Live Production API
+
+The application is currently deployed and available at:
+
+**Base URL:** `https://volta-router.fly.dev`
+
+### Available Endpoints
+
+#### 1. Health Check
+**GET** `/health`
+
+Simple health check endpoint to verify the service is running.
+
+```bash
+curl https://volta-router.fly.dev/health
+```
+
+**Response:**
+```json
+{
+  "status": "Ok"
+}
+```
+
+---
+
+#### 2. Load Test Data
+**POST** `/volta-router/v1/transactions/load`
+
+Loads test transaction data into memory. Automatically adjusts timestamps to current server time to ensure data is within the 15-minute routing window.
+
+```bash
+curl -X POST https://volta-router.fly.dev/volta-router/v1/transactions/load
+```
+
+**Response:**
+```json
+{
+  "message": "Test data loaded successfully",
+  "transactions_loaded": 540
+}
+```
+
+---
+
+#### 3. Get Routing Decision
+**POST** `/volta-router/v1/route`
+
+Selects the best payment processor for a given transaction based on approval rates. Returns the processor with highest approval rate and risk classification.
+
+**Request Body:**
+```json
+{
+  "amount": 100.0,
+  "currency": "BRL",
+  "country": "BR"
+}
+```
+
+```bash
+curl -X POST https://volta-router.fly.dev/volta-router/v1/route \
+  -H "Content-Type: application/json" \
+  -d '{"amount": 100, "currency": "BRL", "country": "BR"}'
+```
+
+**Response:**
+```json
+{
+  "processor": "RapidPay_BR",
+  "approval_rate": 95,
+  "risk_level": "low",
+  "reason": "Highest approval rate for BR",
+  "timestamp": "2026-02-26T15:59:17Z"
+}
+```
+
+**Supported Countries & Currencies:**
+- Brazil (BR): BRL
+- Mexico (MX): MXN
+- Colombia (CO): COP
+
+---
+
+#### 4. Get Routing Decision with Failover
+**POST** `/volta-router/v1/route?failover=true`
+
+Returns the best processor along with fallback options (2nd and 3rd best processors) for redundancy.
+
+```bash
+curl -X POST "https://volta-router.fly.dev/volta-router/v1/route?failover=true" \
+  -H "Content-Type: application/json" \
+  -d '{"amount": 100, "currency": "MXN", "country": "MX"}'
+```
+
+**Response:**
+```json
+{
+  "processor": "RapidPay_MX",
+  "approval_rate": 86.67,
+  "risk_level": "low",
+  "reason": "Highest approval rate for MX",
+  "timestamp": "2026-02-26T15:58:56Z",
+  "fallback": {
+    "processor": "TurboAcquire_MX",
+    "approval_rate": 83.33
+  },
+  "last_resort": {
+    "processor": "PayFlow_MX",
+    "approval_rate": 61.67
+  }
+}
+```
+
+---
+
+#### 5. Get All Processor Health
+**GET** `/volta-router/v1/processors`
+
+Returns health statistics for all payment processors including approval rates, transaction counts, and circuit breaker states.
+
+```bash
+curl https://volta-router.fly.dev/volta-router/v1/processors
+```
+
+**Response:**
+```json
+{
+  "processors": [
+    {
+      "name": "RapidPay_BR",
+      "country": "BR",
+      "approval_rate": 95,
+      "transaction_count": 60,
+      "last_updated": "2026-02-26T15:58:37Z"
+    },
+    {
+      "name": "TurboAcquire_BR",
+      "country": "BR",
+      "approval_rate": 83.33,
+      "transaction_count": 60,
+      "last_updated": "2026-02-26T15:58:37Z"
+    }
+    // ... 7 more processors
+  ]
+}
+```
+
+---
+
+#### 6. Get Specific Processor Health
+**GET** `/volta-router/v1/processors/:name`
+
+Returns health statistics for a specific processor.
+
+```bash
+curl https://volta-router.fly.dev/volta-router/v1/processors/RapidPay_BR
+```
+
+**Response:**
+```json
+{
+  "name": "RapidPay_BR",
+  "country": "BR",
+  "approval_rate": 95,
+  "transaction_count": 60,
+  "last_updated": "2026-02-26T15:58:37Z"
+}
+```
+
+---
+
+#### 7. Get Routing Statistics
+**GET** `/volta-router/v1/routing/stats`
+
+Returns distribution of routing decisions across processors for the last 50 decisions.
+
+```bash
+curl https://volta-router.fly.dev/volta-router/v1/routing/stats
+```
+
+**Response:**
+```json
+{
+  "total_decisions": 15,
+  "distribution": {
+    "RapidPay_BR": 10,
+    "RapidPay_MX": 3,
+    "TurboAcquire_BR": 2
+  },
+  "window": "last_50_decisions"
+}
+```
+
+---
+
+### Query Parameters
+
+#### Simulation Mode
+Add `?simulate=true` to the routing endpoint to test routing decisions without recording them in statistics.
+
+```bash
+curl -X POST "https://volta-router.fly.dev/volta-router/v1/route?simulate=true" \
+  -H "Content-Type: application/json" \
+  -d '{"amount": 100, "currency": "BRL", "country": "BR"}'
+```
+
+---
+
+### Risk Level Classification
+
+- **Low Risk**: Approval rate > 80%
+- **Medium Risk**: Approval rate between 70% and 80%
+- **High Risk**: Approval rate < 70%
+
+---
+
+### Circuit Breaker
+
+Processors with approval rates below 60% are automatically excluded from routing (circuit breaker opens) for 5 minutes to prevent routing to failing processors. The circuit automatically tests for recovery and closes when the processor's approval rate improves.
+
+---
+
 ## 🚀 Production Considerations
 
 This is a **proof-of-concept**. For production deployment, consider:
